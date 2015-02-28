@@ -1,5 +1,4 @@
 """make_lda_data. Compile corpus + dictionary from textfile across all submissions.
-
 Usage:
   make_lda_data <textfile> <datafile>
 """
@@ -31,10 +30,14 @@ def transform_text(text):
 def texts_iter(filename):
     for f in sorted(os.listdir('.')):
         if f[0] != '.' and os.path.isdir(f):
-            with codecs.open(f + "/" + filename, "r", "utf-8", "ignore") as a:
-                print "Submission by ", f
-                raw_text = a.read()
-                yield (f, raw_text, transform_text(raw_text))
+            try:
+                with codecs.open(f + "/" + filename, "r", "utf-8", "ignore") as a:
+                    print "Submission by ", f
+                    raw_text = a.read()
+                    yield (f, raw_text, transform_text(raw_text))
+            except IOError:
+                print "No file for ", f
+                pass
 
 if __name__ == "__main__":
     args = docopt(__doc__)
@@ -47,4 +50,3 @@ if __name__ == "__main__":
 
     save.save(args['<datafile>'], students=students, texts=texts,
             raw_texts=raw_texts, corpus=corpus, dictionary=dictionary)
-

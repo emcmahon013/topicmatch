@@ -16,7 +16,7 @@ from docopt import docopt
 forward_opts = { 'num_topics': int,
                  'passes': int,
                  'iterations': int,
-                 'alpha': float,
+                 'alpha': str,
                  'eta': float }
 
 if __name__ == "__main__":
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     lda_kwargs = dict((k[2:], forward_opts[k[2:]](v))
             for (k, v) in args.iteritems()
                 if k[2:] in forward_opts and v)
-
+    print(lda_kwargs)
     d = save.load(args['<datafile>'])
 
     logging.basicConfig(level=logging.INFO)
@@ -36,8 +36,11 @@ if __name__ == "__main__":
             corpus=d['corpus'], id2word=d['dictionary'],
             update_every=0, eval_every=5,
             **lda_kwargs)
+    # lsi=gensim.models.lsimodel.LsiModel(corpus=d['corpus'],id2word=d['dictionary'],num_topics=90)
 
-    lda.print_topics(-1)
+    # lsi.print_topics(90)
+
+    lda.print_topics(30)
 
     lda.log_perplexity(d['corpus'])
 

@@ -1,7 +1,7 @@
 """match. Match papers given a corpus and trained model.
 
 Usage:
-  match <datafile> <modelfile> <outfile> <reportfile>
+  match <datafile> <outfile> <reportfile>
 
 """
 from __future__ import print_function
@@ -57,7 +57,8 @@ if __name__ == "__main__":
     args = docopt(__doc__)
 
     d = save.load(args['<datafile>'])
-    lda = gensim.models.ldamodel.LdaModel.load(args['<modelfile>'])
+    lda = gensim.models.LdaModel(d['corpus'],id2word=d['dictionary'],num_topics=75,alpha='auto',eval_every=5)
+    
     K = lda.num_topics
 
     # Obtain the posterior topic distribution for each document.
