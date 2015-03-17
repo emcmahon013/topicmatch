@@ -8,7 +8,7 @@ import string, os, codecs, gensim, save
 
 from docopt import docopt
 from nltk.corpus import stopwords
-from nltk.stem.snowball import EnglishStemmer
+from nltk.stem.snowball import PorterStemmer
 from nltk.tree import Tree
 from nltk.chunk import ne_chunk
 import nltk
@@ -16,9 +16,9 @@ import re
 import enchant
 
 
-stemmer = EnglishStemmer()
+stemmer = PorterStemmer()
 stop=stopwords.words('english')
-WordList=['located','globally','internationally','international','global', 'could', 'may', 'result', 'affect', 'market','product','business','significant','cost','could','us','additional','additionally','require']
+WordList=['located']
 for word in WordList:
     stop.append(stemmer.stem(word))
 STOPWORDS = set((stemmer.stem(w) for w in stopwords.words('english')))
@@ -33,6 +33,24 @@ def transform_word(word):
     # don't stem
     # return word.lower().rstrip(string.punctuation)
     return stemmer.stem(word.lower().strip(string.punctuation))
+
+def remove_NER(text):
+    sents=nltk.sent_tokenize(text)
+    tok_sents=[nltk.word_tokenize(sent) for sent in sents]
+    tag_sents=[nltk.pos_tag(sent) for sent in tok_sents]
+    new_tags=[remove_unicode(tag) for tag in tag_sents]
+    chunk_sents=[nltk.ne_chunk(sent) for sent in new_tags]
+    s=""
+    for sent in chunk_sents:
+        for chunk in sent:
+            if type(chunk)!=nltk.Tree:
+                if s=="" or chunk[0] in string.punctuation:
+                    s+=chunk[0]
+                else:
+                    s+=" "+chunk[0]
+    return s
+
+
 
 def remove_place(text):
     CountryList=['puerto','guam','republic','kingdom','region','latin','north','northern','east','eastern','west','western','south','southern','northwest','northwestern','northeast','northeastern','southwest','southwestern','southeast','southeastern','panhandle','gulf']
@@ -61,33 +79,43 @@ def remove_place(text):
             elif type(chunk) is nltk.Tree:
                 for subtree in chunk.subtrees():
                         if subtree.label()=='GPE' or subtree.label()=='LOCATION' or subtree.label()=='GSP' or subtree.pos()[0][0][0].lower() in CountryList:
-                            print("DEL "+str(chunk))
                             place=True    
                         elif d.check(subtree.pos()[0][0][0])==True:
-                            print("subtree"+str(subtree))
                             n=len(subtree.pos())
                             for i in range(n):
                                 word=subtree.pos()[i][0]
-                                if comma==True and place==True:
-                                    print("DEL-P: "+str(word))
-                                else:
-                                    print("add word-P: "+str(word[0]))
+                                if comma!=True or place!=True:
                                     if s=="" or word[0] in string.punctuation:
                                         s+=word[0]
                                     else:
                                         s+=" "+word[0]
                                     comma=False
-                                    place=False
-                        else:
-                            try:
-                                print("del: "+str(chunk[0][0]))  
-                            except:
-                                print("can't print deleted")            
+                                    place=False           
     return s
 
+def remove_unicode(tag_sent):
+    tag_tracker=[]
+    tag_token=[]
+    n=len(tag_sent)
+    for i in range(n):
+        if tag_sent[i][0]=='&':
+            tag_token.append(tag_sent[i])
+            tag_tracker.append(i)
+        try:
+            if (i-tag_tracker[len(tag_tracker)-1]==1) and (tag_sent[i][1]=='#' or tag_sent[i][1]=='CD'):
+                tag_token.append(tag_sent[i])
+                tag_tracker.append(i)
+        except IndexError:
+            pass
+    new_tags=[t for t in tag_sent if t not in tag_token]
+    return new_tags
 
-def transform_text(text):
-    s=remove_place(text)
+
+def transform_text(text,textfile):
+    if textfile=='abstract.txt' or textfile=='paper.txt':
+        s=remove_place(text)
+    elif textfile=='risk.txt':
+        s=remove_NER(text)
     words = s.split()
     return remove_stopwords(map(transform_word, words))
 
@@ -98,7 +126,7 @@ def texts_iter(filename):
                 with codecs.open(f + "/" + filename, "r", "utf-8", "ignore") as a:
                     print ("Submission by "+ str(f))
                     raw_text = a.read()
-                    yield (f, raw_text, transform_text(raw_text))
+                    yield (f, raw_text, transform_text(raw_text,filename))
             except IOError:
                 print "No file for ", f
 
@@ -107,8 +135,11 @@ if __name__ == "__main__":
 
     students, raw_texts, texts = zip(*list(texts_iter(args['<textfile>'])))
     dictionary = gensim.corpora.dictionary.Dictionary(texts)
+    unfiltered=dictionary.token2id.keys()
+    dictionary.filter_extremes(no_below=5,no_above=.6)
+    filtered=dictionary.token2id.keys()
+    filtered_out=set(unfiltered)-set(filtered)
     dictionary.compactify()
-
     corpus = map(dictionary.doc2bow, texts)
 
     save.save(args['<datafile>'], students=students, texts=texts,

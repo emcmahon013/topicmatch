@@ -15,7 +15,13 @@ def clean_topics(topics,csv=False):
 def aggregate(topics,comp,csv=False,std=True):
 	topics=clean_topics(topics,csv)
 	topics=pd.merge(topics,comp,on='Symbol')
+	topics=topics.fillna(0)
 	by_industry=topics.groupby('Industry')
+	# i=0
+	# for group in by_industry:
+	# 	if i==0:
+	# 		print group
+	# 		i+=1
 	ind_med=by_industry.mean()
 	ind_std=by_industry.std()
 	if std==True:

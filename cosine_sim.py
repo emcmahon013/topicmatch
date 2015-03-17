@@ -113,7 +113,8 @@ if __name__ == "__main__":
 	args = docopt(__doc__)
 	file='/Users/erinmcmahon/mygit/topicmatch/COMP.csv'
 	comp=pd.read_csv(file,encoding='ISO-8859-1')
-	accuracy=topic_compare(comp,10,400)
+	accuracy=topic_compare(comp,10,100)
+	accuracy.to_csv('/Users/erinmcmahon/mygit/topicatch.accuracy,csv',sep=',')
 	# accuracy=topic_compare(comp,101,111,jump=2)
 	print(accuracy)
 
